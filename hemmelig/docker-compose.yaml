@@ -1,0 +1,43 @@
+services:
+  hemmelig:
+    image: hemmeligapp/hemmelig:${TAG}
+    container_name: ${PROJECT_NAME}
+    hostname: hemmelig
+    init: true
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ${VOLUME_PATH}/files:/var/tmp/hemmelig/upload/files
+      - ${VOLUME_PATH}/database:/home/node/hemmelig/database/
+    environment:
+      - SECRET_PORT=3000
+      - SECRET_HOST=${HOSTNAME}
+      - SECRET_DISABLE_USERS=false
+      - SECRET_ENABLE_FILE_UPLOAD=true
+      - SECRET_FILE_SIZE=10
+      - SECRET_FORCED_LANGUAGE=en
+      - SECRET_JWT_SECRET=${JWT}
+      - SECRET_MAX_TEXT_SIZE=256
+    stop_grace_period: 1m
+    #healthcheck:
+    #  test: 'wget -O /dev/null localhost:3000 || exit 1'
+    #  timeout: 5s
+    #  retries: 1
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${PROJECT_NAME}.rule=Host(`${HOSTNAME}`)
+      - traefik.http.routers.${PROJECT_NAME}.entrypoints=${ENTRYPOINTS}
+      - traefik.http.routers.${PROJECT_NAME}.tls.certresolver=${TLSCERTRESOLVER}
+      - traefik.http.routers.${PROJECT_NAME}.tls=${TLS}
+      - traefik.http.routers.${PROJECT_NAME}.service=${PROJECT_NAME}
+      - traefik.http.routers.${PROJECT_NAME}.middlewares=oidcAuth@file
+      - traefik.http.services.${PROJECT_NAME}.loadbalancer.server.port=3000
+      - traefik.docker.network=proxy
+      # watchtower update
+      - com.centurylinklabs.watchtower.enable=true
+    networks:
+      - proxy
+networks:
+  proxy:
+    external: true
