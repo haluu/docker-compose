@@ -1,0 +1,31 @@
+services:
+  drawio:
+    container_name: ${PROJECT_NAME}
+    image: jgraph/drawio:${TAG}
+    restart: unless-stopped
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
+      interval: 1m30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${PROJECT_NAME}.rule=Host(`${HOSTNAME}`)
+      - traefik.http.routers.${PROJECT_NAME}.entrypoints=${ENTRYPOINTS}
+      - traefik.http.routers.${PROJECT_NAME}.tls.certresolver=${TLSCERTRESOLVER}
+      - traefik.http.routers.${PROJECT_NAME}.tls=${TLS}
+      - traefik.http.routers.${PROJECT_NAME}.service=${PROJECT_NAME}
+      - traefik.http.routers.${PROJECT_NAME}.middlewares=oidcAuth@docker
+      - traefik.http.services.${PROJECT_NAME}.loadbalancer.server.port=8080
+      - traefik.docker.network=proxy
+      # watchtower update
+      - com.centurylinklabs.watchtower.enable=${ENABLE_WATCHTOWER}
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true

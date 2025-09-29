@@ -1,0 +1,26 @@
+services:
+  watchtower:
+    image: containrrr/watchtower:${TAG}
+    container_name: ${PROJECT_NAME}
+    restart: unless-stopped
+    networks:
+      - proxy
+    env_file:
+      - .env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=${CLEANUP}
+      - WATCHTOWER_LABEL_ENABLE=${LABEL}
+      #- WATCHTOWER_MONITOR_ONLY=true
+      #- WATCHTOWER_POLL_INTERVAL=30
+      - WATCHTOWER_SCHEDULE=${SCHEDULE}
+      - WATCHTOWER_NOTIFICATIONS=${NOTIFICATIONS}
+      - WATCHTOWER_NOTIFICATION_SLACK_HOOK_URL=${SLACK_HOOK_URL}
+      - WATCHTOWER_NOTIFICATION_SLACK_IDENTIFIER=${SLACK_IDENTIFIER}
+      - WATCHTOWER_NOTIFICATION_SLACK_CHANNEL=${SLACK_CHANNEL}
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+networks:
+  proxy:
+    external: true

@@ -1,0 +1,42 @@
+http:
+  middlewares:
+    secureHeaders:
+      headers:
+        sslRedirect: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+    routers:
+      http-catchall:
+        rule: "HostRegexp(`{host:.+}`)"
+        entryPoints:
+          - http
+        middlewares:
+          - redirect-to-https
+    oidcAuth:
+      plugin:
+        traefik-oidc-auth:
+          Secret: "32-character-random-string-here!"
+          Provider:
+            Url: "https://pocketid.domain.tld"
+            ClientId: "ClientID of pocketid configurations"
+            ClientSecret: "Client Secret of pocketid configurations" 
+            TokenValidation: IdToken
+            UsePkce: false
+          Scopes: ["openid", "profile", "email"]
+tls:
+  options:
+    default:
+      cipherSuites:
+        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+      minVersion: VersionTLS12

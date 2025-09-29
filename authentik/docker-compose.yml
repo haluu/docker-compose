@@ -1,0 +1,123 @@
+services:
+  postgresql:
+    image: docker.io/library/postgres:12-alpine
+    container_name: ${PROJECT_NAME}-psql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    volumes:
+      - ${VOLUME_PATH}/psql:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: ${PG_PASS}
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_DB: ${PG_DB}
+    env_file:
+      - .env
+    networks:
+      - internal
+    labels:
+      # watchtower update
+      - com.centurylinklabs.watchtower.enable=true
+
+  redis:
+    image: docker.io/library/redis:alpine
+    container_name: ${PROJECT_NAME}-redis
+    command: --save 60 1 --loglevel warning
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 3s
+    volumes:
+      - ${VOLUME_PATH}/redis:/data
+    networks:
+      - internal
+    env_file:
+      - .env
+    labels:
+    # watchtower update
+    - com.centurylinklabs.watchtower.enable=true
+
+  authentik-proxy:
+    image: ghcr.io/goauthentik/server:${TAG}
+    container_name: ${PROJECT_NAME}
+    restart: unless-stopped
+    command: server
+    ports:
+      - 9000:9000
+      - 9443:9443
+    environment:
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_POSTGRESQL__HOST: postgresql
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER}
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+    volumes:
+      - ${VOLUME_PATH}/media:/media
+      - ${VOLUME_PATH}/custom-templates:/templates
+    env_file:
+      - .env
+    depends_on:
+      - postgresql
+      - redis
+    networks:
+      - proxy
+      - internal
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${PROJECT_NAME}.rule=Host(`${HOSTNAME}`)
+      - traefik.http.routers.${PROJECT_NAME}.entrypoints=${ENTRYPOINTS}
+      - traefik.http.routers.${PROJECT_NAME}.tls.certresolver=${TLSCERTRESOLVER}
+      - traefik.http.routers.${PROJECT_NAME}.tls=${TLS}
+      - traefik.http.routers.${PROJECT_NAME}-outpost.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${DOMAIN}`) && PathPrefix(`/outpost.goauthentik.io/`)
+      - traefik.http.routers.${PROJECT_NAME}-outpost.entrypoints=${ENTRYPOINTS}
+      - traefik.http.routers.${PROJECT_NAME}-outpost.tls.certresolver=${TLSCERTRESOLVER}
+      - traefik.http.routers.${PROJECT_NAME}-outpost.tls=${TLS}
+      - traefik.http.routers.${PROJECT_NAME}.service=${PROJECT_NAME}
+      - traefik.http.services.${PROJECT_NAME}.loadbalancer.server.port=9000
+      - traefik.docker.network=proxy
+      - traefik.http.middlewares.${PROJECT_NAME}.forwardauth.address=http://authentik-proxy:9000/outpost.goauthentik.io/auth/traefik
+      - traefik.http.middlewares.${PROJECT_NAME}.forwardauth.trustForwardHeader=true
+      - traefik.http.middlewares.${PROJECT_NAME}.forwardauth.authResponseHeaders=X-authentik-username,X-authentik-groups,X-authentik-email,X-authentik-name,X-authentik-uid,X-authentik-jwt,X-authentik-meta-jwks,X-authentik-meta-outpost,X-authentik-meta-provider,X-authentik-meta-app,X-authentik-meta-version
+      # watchtower update
+      - com.centurylinklabs.watchtower.enable=true
+
+  worker:
+    image: ghcr.io/goauthentik/server:${TAG}
+    container_name: ${PROJECT_NAME}-worker
+    restart: unless-stopped
+    command: worker
+    user: root
+    environment:
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_POSTGRESQL__HOST: postgresql
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER}
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+    volumes:
+      - ${VOLUME_PATH}/media:/media
+      - ${VOLUME_PATH}/custom-templates:/templates
+    env_file:
+      - .env
+    depends_on:
+      - postgresql
+      - redis
+    networks:
+      - internal
+    labels:
+    # watchtower update
+    - com.centurylinklabs.watchtower.enable=true
+
+networks:
+  internal:
+    external: true
+  proxy:
+    external: true

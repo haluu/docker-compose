@@ -1,0 +1,32 @@
+services:
+  code:
+    image: lscr.io/linuxserver/code-server:${TAG}
+    container_name: ${PROJECT_NAME}
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - ${VOLUME_PATH}:/config
+    networks:
+      - proxy
+    env_file:
+      - .env
+    labels:
+      - traefik.enable=true
+      # routers
+      - traefik.http.routers.${PROJECT_NAME}.rule=Host(`${HOSTNAME}`)
+      - traefik.http.routers.${PROJECT_NAME}.entrypoints=${ENTRYPOINTS}
+      - traefik.http.routers.${PROJECT_NAME}.tls.certresolver=${TLSCERTRESOLVER}
+      - traefik.http.routers.${PROJECT_NAME}.tls=${TLS}
+      - traefik.http.routers.${PROJECT_NAME}.service=${PROJECT_NAME}
+      - traefik.http.routers.${PROJECT_NAME}.middlewares=oidcAuth@file
+      # services
+      - traefik.http.services.${PROJECT_NAME}.loadbalancer.server.port=8443
+      # network
+      - traefik.docker.network=proxy
+      # watchtower update
+      - com.centurylinklabs.watchtower.enable=true
+networks:
+  proxy:
+    external: true

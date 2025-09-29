@@ -1,0 +1,54 @@
+services:
+  traefik:
+    container_name: ${PROJECT_NAME}
+    image: traefik:${TAG}
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - socket-proxy
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - CF_API_EMAIL=${CF_API_EMAIL}
+      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
+    networks:
+      - proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${VOLUME_PATH}/traefik.yml:/traefik.yml:ro
+      - ${VOLUME_PATH}/acme.json:/acme.json
+      - ${VOLUME_PATH}/configurations:/configurations
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${PROJECT_NAME}.rule=Host(`${HOSTNAME}`)
+      - traefik.http.routers.${PROJECT_NAME}.entrypoints=${ENTRYPOINTS}
+      - traefik.http.routers.${PROJECT_NAME}.service=api@internal
+      - traefik.http.routers.${PROJECT_NAME}.middlewares=oidcAuth@file
+      - traefik.http.routers.${PROJECT_NAME}.middlewares=http-catchall@file
+      - traefik.http.middlewares.${PROJECT_NAME}=redirect-to-https@file
+      
+      # Watchtower Update
+      - com.centurylinklabs.watchtower.enable=${ENABLE_WATCHTOWER}
+
+  socket-proxy:
+    container_name: ${PROJECT_NAME}-socket-proxy
+    image: tecnativa/docker-socket-proxy:${TAG_PROXY}
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      CONTAINERS: 1
+    networks:
+      - proxy
+    labels:
+      # Watchtower Update
+      - com.centurylinklabs.watchtower.enable=${ENABLE_WATCHTOWER}
+
+networks:
+      proxy:
+        external: true

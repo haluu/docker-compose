@@ -1,0 +1,50 @@
+api:
+  dashboard: true
+
+global:
+  sendAnonymousUsage: false
+
+entryPoints:
+  http:
+    address: :80
+    reusePort: true
+    http:
+      redirections:
+        entryPoint:
+          to: https
+          scheme: https
+
+  https:
+    address: :443
+    http:
+      tls:
+        certResolver: letsencrypt
+
+serversTransport:
+  insecureSkipVerify: true
+
+experimental:
+  plugins:
+    traefik-oidc-auth:
+      moduleName: "github.com/sevensolutions/traefik-oidc-auth"
+      version: "v0.16.0"
+
+providers:
+  docker:
+    endpoint: "tcp://socket-proxy:2375"
+    exposedByDefault: false
+    network: proxy
+
+  file:
+    filename: configurations/dynamic.yml
+    watch: true
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: CHANGEME@EMAILS.TLD
+      storage: acme.json
+      # Lets Encrypt Prod
+      caServer: https://acme-v02.api.letsencrypt.org/directory
+      dnsChallenge:
+        provider: cloudflare

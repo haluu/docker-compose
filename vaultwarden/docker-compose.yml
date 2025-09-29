@@ -1,0 +1,35 @@
+services:
+  bitwardenrs:
+    image: vaultwarden/server:${TAG}
+    container_name: ${PROJECT_NAME}
+    restart: unless-stopped
+    volumes:
+      - ${VOLUME_PATH}:/data
+    environment:
+      - WEBSOCKET_ENABLED=true
+      - WEB_VAULT_ENABLED=true
+      - SIGNUPS_ALLOWED=false
+      # Comment admin token to disable admin interface
+      - ADMIN_TOKEN=${ADMIN_TOKEN}
+    networks:
+      - proxy
+    env_file:
+      - .env
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${PROJECT_NAME}.rule=Host(`${HOSTNAME}`)
+      - traefik.http.routers.${PROJECT_NAME}.entrypoints=${ENTRYPOINTS}
+      - traefik.http.routers.${PROJECT_NAME}.tls.certresolver=${TLSCERTRESOLVER}
+      - traefik.http.routers.${PROJECT_NAME}.tls=${TLS}
+      - traefik.http.routers.${PROJECT_NAME}.service=${PROJECT_NAME}
+      - traefik.http.services.${PROJECT_NAME}.loadbalancer.server.scheme=http
+      # Watchtower Update
+      - com.centurylinklabs.watchtower.enable=${ENABLE_WATCHTOWER}
+    logging:
+      driver: "syslog"
+      options:
+        tag: "Bitwarden"
+
+networks:
+  proxy:
+    external: true
