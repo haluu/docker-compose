@@ -15,8 +15,7 @@ services:
       POSTGRES_PASSWORD: ${PG_PASS}
       POSTGRES_USER: ${PG_USER}
       POSTGRES_DB: ${PG_DB}
-    env_file:
-      - .env
+    env_file: .env
     networks:
       - internal
     labels:

@@ -18,7 +18,7 @@ services:
       - traefik.http.routers.${PROJECT_NAME}.tls.certresolver=${TLSCERTRESOLVER}
       - traefik.http.routers.${PROJECT_NAME}.tls=${TLS}
       - traefik.http.routers.${PROJECT_NAME}.service=${PROJECT_NAME}
-      - traefik.http.routers.${PROJECT_NAME}.middlewares=oidcAuth@docker
+      - traefik.http.routers.${PROJECT_NAME}.middlewares=oidcAuth@file
       - traefik.http.services.${PROJECT_NAME}.loadbalancer.server.port=8080
       - traefik.docker.network=proxy
       # watchtower update

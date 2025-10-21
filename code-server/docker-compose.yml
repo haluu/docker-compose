@@ -21,7 +21,6 @@ services:
       - traefik.http.routers.${PROJECT_NAME}.tls=${TLS}
       - traefik.http.routers.${PROJECT_NAME}.service=${PROJECT_NAME}
       - traefik.http.routers.${PROJECT_NAME}.middlewares=oidcAuth@file
-      # services
       - traefik.http.services.${PROJECT_NAME}.loadbalancer.server.port=8443
       # network
       - traefik.docker.network=proxy
