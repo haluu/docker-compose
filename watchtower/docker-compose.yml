@@ -23,4 +23,4 @@ services:
       - "com.centurylinklabs.watchtower.enable=true"
 networks:
   proxy:
-    external: true
+    external: false
